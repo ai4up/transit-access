@@ -46,32 +46,15 @@ def transit_access(G, loc, decay_param=0.5):
     """
 
     stops = utils.nodes_to_gdf(G)
-    stops['index'] = stops['frequency'] * stops['centrality']
-    stops['index_norm'] = np.nanmean(StandardScaler().fit_transform(stops[['centrality', 'frequency']]), axis=1)
 
     dm = _distance_matrix(loc, stops.geometry)
-    score_centrality = _calculate_gravity_score(
-        distance_matrix=dm,
-        supply=stops['index'].values,
-        decay_param=decay_param,
-    )
-    score_centrality_norm = _calculate_gravity_score(
-        distance_matrix=dm,
-        supply=stops['index_norm'].values,
-        decay_param=decay_param,
-    )
-    score_spatiotemporal = _calculate_gravity_score(
+    score = _calculate_gravity_score(
         distance_matrix=dm,
         supply=stops['frequency'].values,
         decay_param=decay_param,
     )
-    score_spatial = _calculate_gravity_score(
-        distance_matrix=dm,
-        supply=np.ones(len(stops)),
-        decay_param=decay_param,
-    )
 
-    return score_centrality, score_centrality_norm, score_spatiotemporal, score_spatial
+    return score
 
 
 def transit_access_for_grid(G, area=None, h3_res=9):
@@ -114,11 +97,7 @@ def transit_access_for_grid(G, area=None, h3_res=9):
         area = stops.dissolve().convex_hull.buffer(2000).to_frame('geometry')
 
     hex_grid = _create_hex_grid(h3_res, area)
-    s1, s2, s3, s4 = transit_access(G, hex_grid.centroid)
-    hex_grid['score_centrality'] = s1
-    hex_grid['score_centrality_norm'] = s2
-    hex_grid['score_spatiotemporal'] = s3
-    hex_grid['score_spatial'] = s4
+    hex_grid['score_spatiotemporal'] = transit_access(G, hex_grid.centroid)
     return hex_grid
 
 
@@ -155,10 +134,7 @@ def transit_access_for_neighborhood(G, neighborhoods):
 
     hex_grid = transit_access_for_grid(G, neighborhoods)
     hex_grid['geometry'] = hex_grid.centroid
-    neighborhoods = _mean_per_area(neighborhoods, hex_grid, 'score_centrality')
-    neighborhoods = _mean_per_area(neighborhoods, hex_grid, 'score_centrality_norm')
     neighborhoods = _mean_per_area(neighborhoods, hex_grid, 'score_spatiotemporal')
-    neighborhoods = _mean_per_area(neighborhoods, hex_grid, 'score_spatial')
     return neighborhoods
 
 
