@@ -5,15 +5,14 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import h3pandas
-from sklearn.preprocessing import StandardScaler
 
-from gtfs2nx import network, utils
+from gtfs2nx import network
 
 logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-def transit_access(G, loc, decay_param=0.5):
+def transit_access(stops, loc, decay_param=0.5):
     """
     Calculate the TransitAccess score for a set of locations.
 
@@ -22,8 +21,8 @@ def transit_access(G, loc, decay_param=0.5):
 
     Parameters
     ----------
-    G : networkx.MultiDiGraph
-        Directional transit network graph with precalculated closeness centrality and service frequency.
+    stops : geopandas.GeoDataFrame
+        GeoDataFrame of transit stops with precalculated closeness centrality and service frequency.
     loc : geopandas.GeoSeries
         GeoSeries of locations for which the TransitAccess score should be calculated.
     decay_param : float
@@ -39,13 +38,12 @@ def transit_access(G, loc, decay_param=0.5):
     Examples
     --------
     >>> G = network.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
+    >>> stops = utils.nodes_to_gdf(G)
     >>> locations = geopandas.GeoSeries.from_xy([13.351798027529089], [52.49615200183667], crs='EPSG:4326')
     >>> locations = locations.to_crs(G.graph['crs'])
-    >>> score.transit_access(G, locations)
+    >>> score.transit_access(stops, locations)
     0    0.00123
     """
-
-    stops = utils.nodes_to_gdf(G)
 
     dm = _distance_matrix(loc, stops.geometry)
     score = _calculate_gravity_score(
@@ -57,7 +55,7 @@ def transit_access(G, loc, decay_param=0.5):
     return score
 
 
-def transit_access_for_grid(G, area=None, h3_res=9):
+def transit_access_for_grid(stops, area=None, h3_res=9):
     """
     Calculate the TransitAccess score for a hexagonal grid.
 
@@ -66,8 +64,8 @@ def transit_access_for_grid(G, area=None, h3_res=9):
 
     Parameters
     ----------
-    G : networkx.MultiDiGraph
-        Directional transit network graph with precalculated closeness centrality and service frequency.
+    stops : geopandas.GeoDataFrame
+        GeoDataFrame of transit stops with precalculated closeness centrality and service frequency.
     area : geopandas.GeoDataFrame
         GeoDataFrame of the area for which the TransitAccess score should be calculated.
         If None, the convex hull of the transit stops with a 2km buffer is used.
@@ -83,7 +81,8 @@ def transit_access_for_grid(G, area=None, h3_res=9):
     Examples
     --------
     >>> G = network.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
-    >>> score.transit_access_for_grid(G, h3_res=8)
+    >>> stops = utils.nodes_to_gdf(G)
+    >>> score.transit_access_for_grid(stops, h3_res=8)
                                geometry                                                access_score
         h3_08
         8866e09107fffff	POLYGON ((987746.618 999962.825, 987300.330 99...	7.883864e-03
@@ -93,15 +92,14 @@ def transit_access_for_grid(G, area=None, h3_res=9):
 
     if area is None:
         logger.info('Calculating TransitAccess index for convex hull with 2km buffer around transit stops.')
-        stops = utils.nodes_to_gdf(G)
         area = stops.dissolve().convex_hull.buffer(2000).to_frame('geometry')
 
     hex_grid = _create_hex_grid(h3_res, area)
-    hex_grid['score_spatiotemporal'] = transit_access(G, hex_grid.centroid)
+    hex_grid['score_spatiotemporal'] = transit_access(stops, hex_grid.centroid)
     return hex_grid
 
 
-def transit_access_for_neighborhood(G, neighborhoods):
+def transit_access_for_neighborhood(stops, neighborhoods):
     """
     Calculate the TransitAccess score for a set of neighborhoods.
 
@@ -111,8 +109,8 @@ def transit_access_for_neighborhood(G, neighborhoods):
 
     Parameters
     ----------
-    G : networkx.MultiDiGraph
-        Directional transit network graph with precalculated closeness centrality and service frequency.
+    stops : geopandas.GeoDataFrame
+        GeoDataFrame of transit stops with precalculated closeness centrality and service frequency.
     neighborhoods : geopandas.GeoDataFrame
         GeoDataFrame of the neighborhoods for which the TransitAccess score should be calculated.
 
@@ -125,14 +123,15 @@ def transit_access_for_neighborhood(G, neighborhoods):
     Examples
     --------
     >>> G = network.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
-    >>> score.transit_access_for_neighborhood(G, gdf_zip_codes)
+    >>> stops = utils.nodes_to_gdf(G)
+    >>> score.transit_access_for_neighborhood(stops, gdf_zip_codes)
                  zip_code     geometry                                         	access_score
         0	10115	POLYGON ((389163.210 5821872.935, 389321.827 5...	0.379396
         1	10117	POLYGON ((389678.019 5820987.307, 389683.298 5...	0.450508
         2	10119	POLYGON ((391390.987 5820861.120, 391546.214 5...	0.364538
     """
 
-    hex_grid = transit_access_for_grid(G, neighborhoods)
+    hex_grid = transit_access_for_grid(stops, neighborhoods)
     hex_grid['geometry'] = hex_grid.centroid
     neighborhoods = _mean_per_area(neighborhoods, hex_grid, 'score_spatiotemporal')
     return neighborhoods
