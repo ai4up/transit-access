@@ -6,7 +6,7 @@ import pandas as pd
 import geopandas as gpd
 import h3pandas
 
-from gtfs2nx import network
+ID_SEP = '@@'
 
 logging.basicConfig(format='%(asctime)s | %(levelname)s | %(message)s', level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -171,14 +171,18 @@ def _calculate_gravity_score(distance_matrix, supply, decay_param):
     access_to_each_stop = (supply * _gaussian_decay(distance_matrix, decay_param)).T
 
     # only consider a single stop per route and direction
-    # intuition: closeness to two stops of same trip is not better than to one stop with identical distance
-    access_to_each_stop['route_id_w_direction'] = access_to_each_stop.index.str.split(network.ID_SEP, n=1).str[1]
-    access_to_each_route = access_to_each_stop.groupby('route_id_w_direction').transform(_sum_two_largest)
-    # access_to_each_route = access_to_each_stop.groupby('route_id_w_direction').max() # assuming direction of route in not encoded in index
+    # intuition: closeness to two stops of same transit line is not better than to one stop with identical distance
+    access_to_each_stop['route_id_w_direction'] = _route_id_w_direction(access_to_each_stop)
+    access_to_each_route = access_to_each_stop.groupby('route_id_w_direction').transform(_sum_two_largest) # assuming direction of route is not encoded in index, but the stop very likely serves two directions
+    # access_to_each_route = access_to_each_stop.groupby('route_id_w_direction').max() # assuming direction of route is encoded in index
 
     # summing up the access to all reachable stops
     access = access_to_each_route.sum()
     return access
+
+
+def _route_id_w_direction(stops):
+    return stops.index.str.split(ID_SEP, n=1).str[1]
 
 
 def _gaussian_decay(distance_array, sigma):
