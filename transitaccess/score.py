@@ -99,7 +99,7 @@ def transit_access_for_grid(stops, area=None, h3_res=9):
     return hex_grid
 
 
-def transit_access_for_neighborhood(stops, neighborhoods):
+def transit_access_for_neighborhood(stops, neighborhoods, h3_res=9):
     """
     Calculate the TransitAccess score for a set of neighborhoods.
 
@@ -131,7 +131,7 @@ def transit_access_for_neighborhood(stops, neighborhoods):
         2	10119	POLYGON ((391390.987 5820861.120, 391546.214 5...	0.364538
     """
 
-    hex_grid = transit_access_for_grid(stops, neighborhoods)
+    hex_grid = transit_access_for_grid(stops, neighborhoods, h3_res)
     hex_grid['geometry'] = hex_grid.centroid
     neighborhoods = _mean_per_area(neighborhoods, hex_grid, 'score_spatiotemporal')
     return neighborhoods
