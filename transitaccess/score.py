@@ -37,11 +37,12 @@ def transit_access(stops, loc, decay_param=0.5):
 
     Examples
     --------
-    >>> G = network.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
+    >>> import gtfs2nx, transitaccess, geopandas
+    >>> G = gtfs2nx.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
     >>> stops = utils.nodes_to_gdf(G)
     >>> locations = geopandas.GeoSeries.from_xy([13.351798027529089], [52.49615200183667], crs='EPSG:4326')
     >>> locations = locations.to_crs(G.graph['crs'])
-    >>> score.transit_access(stops, locations)
+    >>> transitaccess.transit_access(stops, locations)
     0    0.00123
     """
 
@@ -80,9 +81,10 @@ def transit_access_for_grid(stops, area=None, h3_res=9):
 
     Examples
     --------
-    >>> G = network.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
+    >>> import gtfs2nx, transitaccess
+    >>> G = gtfs2nx.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
     >>> stops = utils.nodes_to_gdf(G)
-    >>> score.transit_access_for_grid(stops, h3_res=8)
+    >>> transitaccess.transit_access_for_grid(stops, h3_res=8)
                                geometry                                                access_score
         h3_08
         8866e09107fffff	POLYGON ((987746.618 999962.825, 987300.330 99...	7.883864e-03
@@ -122,9 +124,10 @@ def transit_access_for_neighborhood(stops, neighborhoods, h3_res=9):
 
     Examples
     --------
-    >>> G = network.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
+    >>> import gtfs2nx, transitaccess
+    >>> G = gtfs2nx.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
     >>> stops = utils.nodes_to_gdf(G)
-    >>> score.transit_access_for_neighborhood(stops, gdf_zip_codes)
+    >>> transitaccess.transit_access_for_neighborhood(stops, gdf_zip_codes)
                  zip_code     geometry                                         	access_score
         0	10115	POLYGON ((389163.210 5821872.935, 389321.827 5...	0.379396
         1	10117	POLYGON ((389678.019 5820987.307, 389683.298 5...	0.450508
