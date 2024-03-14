@@ -162,6 +162,8 @@ def _create_hex_grid(h3_res, area):
 
 
 def _mean_per_area(area, points, col):
+    if col in area.columns:
+        area = area.drop(columns=[col])
     points = points[[col, 'geometry']].to_crs(area.crs)
     matched = gpd.sjoin(points, area, how='left', predicate='within')
     mean = matched.groupby('index_right')[col].mean().reset_index().set_index('index_right')
