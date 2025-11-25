@@ -13,12 +13,12 @@ pip install git+https://github.com/ai4up/transit-access@main
 **Prerequisite**
 
 Use [gtfs2nx](https://github.com/ai4up/gtfs2nx/) package to convert GTFS feed to GeoDataFrame of transit stops.
-```
+```Python
 G = gtfs2nx.transit_graph('some-dir/city-GTFS.zip', 'EPSG:26914')
 stops = utils.nodes_to_gdf(G)
 ```
 **API**
-```
+```Python
 # For specific lat lon location
 locations = geopandas.GeoSeries.from_xy([13.351798027529089], [52.49615200183667], crs='EPSG:4326').to_crs(stops.crs)
 score.transit_access(stops, locations)
